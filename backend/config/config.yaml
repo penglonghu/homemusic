@@ -1,0 +1,17 @@
+server:
+  port: 8080
+  mode: release
+
+jwt:
+  secret: homemusic-jwt-secret-2024
+  expire: 7200
+
+database:
+  path: ./data/homemusic.db
+
+logger:
+  level: info
+  path: ./logs
+  max_size: 100
+  max_backup: 10
+  max_age: 30

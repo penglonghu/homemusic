@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: homemusic-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - GIN_MODE=release
+    networks:
+      - homemusic-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: homemusic-frontend
+    restart: always
+    ports:
+      - "8089:80"
+    depends_on:
+      - backend
+    networks:
+      - homemusic-network
+
+networks:
+  homemusic-network:
+    driver: bridge
+
+volumes:
+  data:
