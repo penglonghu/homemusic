@@ -19,20 +19,39 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { login as loginApi } from '@/api/auth'
 
+const router = useRouter()
 const formRef = ref(null)
 const form = ref({
   username: '',
   password: ''
 })
 
-const login = () => {
+const login = async () => {
   if (!form.value.username || !form.value.password) {
     ElMessage.warning('请输入用户名和密码')
     return
   }
-  ElMessage.success('登录功能开发中...')
+
+  try {
+    const res = await loginApi({
+      username: form.value.username,
+      password: form.value.password,
+      remember: true
+    })
+    if (res.data && res.data.token) {
+      localStorage.setItem('homemusic-token', res.data.token)
+      ElMessage.success('登录成功')
+      router.push('/')
+      return
+    }
+    ElMessage.error('登录失败，请重试')
+  } catch (error) {
+    ElMessage.error(error.message || '登录失败')
+  }
 }
 </script>
 

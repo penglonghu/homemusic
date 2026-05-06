@@ -1,0 +1,83 @@
+/* 响应式布局通用样式 */
+
+/* 移动端断点 */
+@media (max-width: 768px) {
+  /* 隐藏元素 */
+  .hidden-mobile {
+    display: none !important;
+  }
+  
+  /* 移动端专用显示 */
+  .visible-mobile {
+    display: block !important;
+  }
+  
+  .flex-mobile-column {
+    flex-direction: column !important;
+  }
+  
+  .text-center-mobile {
+    text-align: center !important;
+  }
+  
+  .w-full-mobile {
+    width: 100% !important;
+  }
+  
+  .p-mobile {
+    padding: 10px !important;
+  }
+  
+  .m-mobile {
+    margin: 10px !important;
+  }
+}
+
+/* 平板/车机断点 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hidden-tablet {
+    display: none !important;
+  }
+  
+  .visible-tablet {
+    display: block !important;
+  }
+  
+  .p-tablet {
+    padding: 12px !important;
+  }
+  
+  .m-tablet {
+    margin: 12px !important;
+  }
+}
+
+/* 桌面端断点 */
+@media (min-width: 1025px) {
+  .hidden-desktop {
+    display: none !important;
+  }
+  
+  .visible-desktop {
+    display: block !important;
+  }
+}
+
+/* 垂直居中 */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 文本省略 */
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 响应式文本 */
+.responsive-text {
+  font-size: clamp(14px, 2.5vw, 18px);
+}

@@ -23,7 +23,7 @@ func setupAPIInitTestDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	dao.DB = db
-	dao.NewInitDao.db = db
+	dao.NewInitDao.SetDB(db)
 }
 
 func TestCheckInit(t *testing.T) {

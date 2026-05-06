@@ -12,6 +12,8 @@ import (
 	"github.com/homemusic/backend/internal/dao"
 	"github.com/homemusic/backend/internal/model"
 	"go.uber.org/zap"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"unicode/utf8"
 )
 
 // MusicService 音乐扫描服务
@@ -41,6 +43,28 @@ var supportedExtensions = map[string]bool{
 func isSupportedAudioFile(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	return supportedExtensions[ext]
+}
+
+// decodeID3String 解码ID3标签中的字符串，尝试处理中文字符
+func decodeID3String(data []byte) string {
+	// 移除null字符和空格
+	str := strings.TrimRight(string(data), "\x00 ")
+	
+	// 检查字符串是否包含非ASCII字符（可能为中文字符）
+	if !utf8.ValidString(str) {
+		// 如果不是有效的UTF-8，尝试用GBK解码
+		// 先尝试GB18030，再尝试GBK
+		decoded, err := simplifiedchinese.GB18030.NewDecoder().Bytes([]byte(str))
+		if err == nil {
+			return strings.TrimSpace(string(decoded))
+		}
+		
+		decoded, err = simplifiedchinese.GBK.NewDecoder().Bytes([]byte(str))
+		if err == nil {
+			return strings.TrimSpace(string(decoded))
+		}
+	}
+	return str
 }
 
 // ScanMusicDirectory 扫描音乐目录
@@ -237,13 +261,13 @@ func (s *MusicService) parseID3v1(filePath string) (*Metadata, error) {
 	metadata := &Metadata{}
 
 	// Title (30 bytes, offset 3)
-	metadata.Title = strings.TrimRight(string(buffer[3:33]), "\x00 ")
+	metadata.Title = decodeID3String(buffer[3:33])
 
 	// Artist (30 bytes, offset 33)
-	metadata.Artist = strings.TrimRight(string(buffer[33:63]), "\x00 ")
+	metadata.Artist = decodeID3String(buffer[33:63])
 
 	// Album (30 bytes, offset 63)
-	metadata.Album = strings.TrimRight(string(buffer[63:93]), "\x00 ")
+	metadata.Album = decodeID3String(buffer[63:93])
 
 	// Year (4 bytes, offset 93)
 	yearStr := strings.TrimRight(string(buffer[93:97]), "\x00 ")
@@ -254,7 +278,7 @@ func (s *MusicService) parseID3v1(filePath string) (*Metadata, error) {
 	}
 
 	// Comment (28 bytes, offset 97) - 注意：ID3v1.1在comment最后有track number
-	metadata.Genre = strings.TrimRight(string(buffer[97:125]), "\x00 ")
+	metadata.Genre = decodeID3String(buffer[97:125])
 
 	// Genre (1 byte, offset 127)
 	genreID := buffer[127]
@@ -316,10 +340,10 @@ func (s *MusicService) GetScanStatistics() (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"total":     total,
-		"scanned":   stats["scanned"],
-		"pending":   stats["pending"],
-		"error":     stats["error"],
+		"total":   total,
+		"scanned": stats["scanned"],
+		"pending": stats["pending"],
+		"error":   stats["error"],
 	}, nil
 }
 
@@ -327,6 +351,48 @@ func (s *MusicService) GetScanStatistics() (map[string]interface{}, error) {
 func (s *MusicService) GetMusics(page, pageSize int) ([]*model.Music, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.musicDao.GetAllMusics(pageSize, offset)
+}
+
+// GetMusicByID 根据ID获取音乐
+func (s *MusicService) GetMusicByID(id uint) (*model.Music, error) {
+	return s.musicDao.GetMusicByID(id)
+}
+
+// BrowseCategory 浏览分类：all、artist、album
+func (s *MusicService) BrowseCategory(category string, page, pageSize int) (interface{}, int64, error) {
+	offset := (page - 1) * pageSize
+	switch category {
+	case "all":
+		return s.musicDao.GetAllMusics(pageSize, offset)
+	case "artist":
+		return s.musicDao.GetArtists(pageSize, offset)
+	case "album":
+		return s.musicDao.GetAlbums(pageSize, offset)
+	default:
+		return nil, 0, nil
+	}
+}
+
+// SearchMusic 全局搜索
+func (s *MusicService) SearchMusic(keyword string, page, pageSize int) ([]*model.Music, int64, error) {
+	offset := (page - 1) * pageSize
+	return s.musicDao.SearchMusics(keyword, pageSize, offset)
+}
+
+// RecordPlay 记录播放历史
+func (s *MusicService) RecordPlay(userID, musicID uint) error {
+	history := &model.PlayHistory{
+		UserID:   userID,
+		MusicID:  musicID,
+		PlayedAt: time.Now(),
+	}
+	return s.musicDao.RecordPlayHistory(history)
+}
+
+// GetRecentPlays 获取最近播放记录
+func (s *MusicService) GetRecentPlays(userID uint, page, pageSize int) ([]*model.PlayHistory, int64, error) {
+	offset := (page - 1) * pageSize
+	return s.musicDao.GetRecentPlayHistory(userID, pageSize, offset)
 }
 
 // CleanDeletedFiles 清理已删除的文件记录

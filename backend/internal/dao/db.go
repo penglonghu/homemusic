@@ -28,8 +28,24 @@ func InitDB() error {
 	DB = db
 	NewInitDao.db = db
 
-	// 自动迁移用户、初始化状态和音乐表
-	err = db.AutoMigrate(&model.User{}, &model.SysInit{}, &model.Music{})
+	// 设置SQLite连接以支持UTF-8字符编码
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	_, err = sqlDB.Exec("PRAGMA encoding = 'UTF-8';")
+	if err != nil {
+		zap.L().Error("设置SQLite编码失败", zap.Error(err))
+		return err
+	}
+	_, err = sqlDB.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		zap.L().Error("启用外键约束失败", zap.Error(err))
+		return err
+	}
+
+	// 自动迁移用户、初始化状态、音乐表和播放历史表
+	err = db.AutoMigrate(&model.User{}, &model.SysInit{}, &model.Music{}, &model.PlayHistory{})
 	if err != nil {
 		return err
 	}

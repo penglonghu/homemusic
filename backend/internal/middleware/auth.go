@@ -11,15 +11,21 @@ import (
 // AuthMiddleware 认证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取token
+		// 优先支持 Authorization Header，回退到 auth_token Cookie
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		var tokenStr string
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+		} else if cookie, err := c.Cookie("auth_token"); err == nil {
+			tokenStr = cookie
+		}
+
+		if tokenStr == "" {
 			common.Unauthorized(c)
 			c.Abort()
 			return
 		}
 
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		claims, err := utils.ParseToken(tokenStr)
 		if err != nil {
 			common.Unauthorized(c)

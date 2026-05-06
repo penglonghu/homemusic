@@ -3,8 +3,10 @@ package main
 import (
 	"github.com/homemusic/backend/cmd"
 	"github.com/homemusic/backend/config"
+	"github.com/homemusic/backend/internal/api"
 	"github.com/homemusic/backend/internal/common"
 	"github.com/homemusic/backend/internal/dao"
+	"github.com/homemusic/backend/internal/service"
 	"go.uber.org/zap"
 )
 
@@ -22,6 +24,9 @@ func main() {
 		common.Logger.Error("init database failed", zap.Error(err))
 		panic("init database failed")
 	}
+
+	// 初始化服务
+	api.SetMusicService(service.NewMusicService())
 
 	// 启动服务
 	cmd.RunServer()

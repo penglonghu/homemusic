@@ -16,11 +16,16 @@ type CustomClaims struct {
 
 // GenerateToken 生成JWT Token
 func GenerateToken(userID uint) (string, error) {
+	return GenerateTokenWithExpire(userID, config.Conf.JWT.Expire)
+}
+
+// GenerateTokenWithExpire 生成指定过期时间的JWT Token
+func GenerateTokenWithExpire(userID uint, expireSeconds int) (string, error) {
 	cfg := config.Conf.JWT
 	claims := CustomClaims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(cfg.Expire) * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expireSeconds) * time.Second)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "homemusic",
 		},

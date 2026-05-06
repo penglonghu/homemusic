@@ -1,7 +1,6 @@
 package service
 
 import (
-	"os"
 	"testing"
 
 	"github.com/homemusic/backend/internal/dao"
@@ -17,7 +16,7 @@ func setupServiceTestDB(t *testing.T) {
 	err = db.AutoMigrate(&model.User{}, &model.SysInit{})
 	assert.NoError(t, err)
 	dao.DB = db
-	dao.NewInitDao.db = db
+	dao.NewInitDao.SetDB(db)
 }
 
 func TestCheckInitStatus(t *testing.T) {

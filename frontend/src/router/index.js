@@ -27,6 +27,10 @@ const router = createRouter({
 let initChecked = false
 let initStatus = null
 
+function isAuthenticated() {
+  return !!localStorage.getItem('homemusic-token')
+}
+
 router.beforeEach(async (to, from, next) => {
   if (!initChecked) {
     try {
@@ -38,14 +42,28 @@ router.beforeEach(async (to, from, next) => {
     initChecked = true
   }
 
-  if (initStatus && initStatus.is_initialized === false && to.path !== '/onboarding') {
-    next('/onboarding')
+  if (initStatus && initStatus.is_initialized === false) {
+    if (to.path !== '/onboarding') {
+      next('/onboarding')
+      return
+    }
+    next()
     return
   }
 
-  if (initStatus && initStatus.is_initialized === true && to.path === '/onboarding') {
-    next('/login')
-    return
+  if (initStatus && initStatus.is_initialized === true) {
+    if (to.path === '/onboarding') {
+      next('/login')
+      return
+    }
+    if (to.path !== '/login' && !isAuthenticated()) {
+      next('/login')
+      return
+    }
+    if (to.path === '/login' && isAuthenticated()) {
+      next('/')
+      return
+    }
   }
 
   next()

@@ -40,3 +40,8 @@ func (d *InitDao) IsInitialized() (bool, error) {
 	}
 	return init.IsInit, nil
 }
+
+// SetDB 设置数据库实例，用于测试和运行时注入
+func (d *InitDao) SetDB(db *gorm.DB) {
+	d.db = db
+}

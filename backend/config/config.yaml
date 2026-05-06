@@ -1,6 +1,8 @@
 server:
   port: 8080
   mode: release
+  cert_file: ./certs/server.crt
+  key_file: ./certs/server.key
 
 jwt:
   secret: homemusic-jwt-secret-2024

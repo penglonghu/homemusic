@@ -55,6 +55,20 @@ func (d *MusicDao) GetMusicByPath(filePath string) (*model.Music, error) {
 	return &music, nil
 }
 
+// GetMusicByID 根据ID获取音乐
+func (d *MusicDao) GetMusicByID(id uint) (*model.Music, error) {
+	var music model.Music
+	err := d.db.First(&music, id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		common.Logger.Error("根据ID查询音乐失败", zap.Uint("music_id", id), zap.Error(err))
+		return nil, err
+	}
+	return &music, nil
+}
+
 // GetMusicsByStatus 根据扫描状态获取音乐列表
 func (d *MusicDao) GetMusicsByStatus(status string, limit, offset int) ([]*model.Music, error) {
 	var musics []*model.Music
@@ -102,6 +116,169 @@ func (d *MusicDao) GetAllMusics(limit, offset int) ([]*model.Music, int64, error
 	}
 
 	return musics, total, nil
+}
+
+// GetArtists 获取歌手列表
+func (d *MusicDao) GetArtists(limit, offset int) ([]map[string]interface{}, int64, error) {
+	type artistCount struct {
+		Artist string `json:"name"`
+		Count  int64  `json:"count"`
+	}
+
+	var artists []artistCount
+	var total int64
+
+	countQuery := d.db.Model(&model.Music{}).
+		Select("artist").
+		Where("artist <> ''").
+		Group("artist")
+	if err := countQuery.Count(&total).Error; err != nil {
+		common.Logger.Error("统计歌手数量失败", zap.Error(err))
+		return nil, 0, err
+	}
+
+	query := d.db.Model(&model.Music{}).
+		Select("artist as artist, count(*) as count").
+		Where("artist <> ''").
+		Group("artist").
+		Order("count DESC, artist ASC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Scan(&artists).Error; err != nil {
+		common.Logger.Error("获取歌手列表失败", zap.Error(err))
+		return nil, 0, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(artists))
+	for _, item := range artists {
+		result = append(result, map[string]interface{}{
+			"name":  item.Artist,
+			"count": item.Count,
+		})
+	}
+
+	return result, total, nil
+}
+
+// GetAlbums 获取专辑列表
+func (d *MusicDao) GetAlbums(limit, offset int) ([]map[string]interface{}, int64, error) {
+	type albumCount struct {
+		Album string `json:"name"`
+		Count int64  `json:"count"`
+	}
+
+	var albums []albumCount
+	var total int64
+
+	countQuery := d.db.Model(&model.Music{}).
+		Select("album").
+		Where("album <> ''").
+		Group("album")
+	if err := countQuery.Count(&total).Error; err != nil {
+		common.Logger.Error("统计专辑数量失败", zap.Error(err))
+		return nil, 0, err
+	}
+
+	query := d.db.Model(&model.Music{}).
+		Select("album as album, count(*) as count").
+		Where("album <> ''").
+		Group("album").
+		Order("count DESC, album ASC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Scan(&albums).Error; err != nil {
+		common.Logger.Error("获取专辑列表失败", zap.Error(err))
+		return nil, 0, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(albums))
+	for _, item := range albums {
+		result = append(result, map[string]interface{}{
+			"name":  item.Album,
+			"count": item.Count,
+		})
+	}
+
+	return result, total, nil
+}
+
+// SearchMusics 全局搜索音乐
+func (d *MusicDao) SearchMusics(keyword string, limit, offset int) ([]*model.Music, int64, error) {
+	var musics []*model.Music
+	var total int64
+	pattern := "%" + keyword + "%"
+
+	countQuery := d.db.Model(&model.Music{}).
+		Where("title LIKE ? OR artist LIKE ? OR album LIKE ?", pattern, pattern, pattern)
+	if err := countQuery.Count(&total).Error; err != nil {
+		common.Logger.Error("统计搜索结果失败", zap.String("keyword", keyword), zap.Error(err))
+		return nil, 0, err
+	}
+
+	query := d.db.Model(&model.Music{}).
+		Where("title LIKE ? OR artist LIKE ? OR album LIKE ?", pattern, pattern, pattern).
+		Order("created_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Find(&musics).Error; err != nil {
+		common.Logger.Error("搜索音乐失败", zap.String("keyword", keyword), zap.Error(err))
+		return nil, 0, err
+	}
+
+	return musics, total, nil
+}
+
+// RecordPlayHistory 记录播放历史
+func (d *MusicDao) RecordPlayHistory(history *model.PlayHistory) error {
+	err := d.db.Create(history).Error
+	if err != nil {
+		common.Logger.Error("记录播放历史失败", zap.Error(err))
+		return err
+	}
+	common.Logger.Debug("记录播放历史成功", zap.Uint("user_id", history.UserID), zap.Uint("music_id", history.MusicID))
+	return nil
+}
+
+// GetRecentPlayHistory 获取最近播放记录
+func (d *MusicDao) GetRecentPlayHistory(userID uint, limit, offset int) ([]*model.PlayHistory, int64, error) {
+	var records []*model.PlayHistory
+	var total int64
+
+	countQuery := d.db.Model(&model.PlayHistory{}).
+		Where("user_id = ?", userID)
+	if err := countQuery.Count(&total).Error; err != nil {
+		common.Logger.Error("统计最近播放记录失败", zap.Uint("user_id", userID), zap.Error(err))
+		return nil, 0, err
+	}
+
+	query := d.db.Model(&model.PlayHistory{}).
+		Where("user_id = ?", userID).
+		Preload("Music").
+		Order("played_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Find(&records).Error; err != nil {
+		common.Logger.Error("获取最近播放记录失败", zap.Uint("user_id", userID), zap.Error(err))
+		return nil, 0, err
+	}
+
+	return records, total, nil
 }
 
 // DeleteMusicByPath 根据路径删除音乐记录

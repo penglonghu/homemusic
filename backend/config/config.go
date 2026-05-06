@@ -16,8 +16,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int    `yaml:"port"`
-	Mode string `yaml:"mode"`
+	Port     int    `yaml:"port"`
+	Mode     string `yaml:"mode"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
 }
 
 type JWTConfig struct {

@@ -16,7 +16,9 @@ func GetUserByID(id uint) (*model.User, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
-		common.Logger.Error("查询用户失败", zap.Uint("user_id", id), zap.Error(err))
+		if common.Logger != nil {
+			common.Logger.Error("查询用户失败", zap.Uint("user_id", id), zap.Error(err))
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -30,7 +32,9 @@ func GetUserByUsername(username string) (*model.User, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
-		common.Logger.Error("根据用户名查询用户失败", zap.String("username", username), zap.Error(err))
+		if common.Logger != nil {
+			common.Logger.Error("根据用户名查询用户失败", zap.String("username", username), zap.Error(err))
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -40,10 +44,14 @@ func GetUserByUsername(username string) (*model.User, error) {
 func CreateUser(user *model.User) error {
 	err := DB.Create(user).Error
 	if err != nil {
-		common.Logger.Error("创建用户失败", zap.String("username", user.Username), zap.Error(err))
+		if common.Logger != nil {
+			common.Logger.Error("创建用户失败", zap.String("username", user.Username), zap.Error(err))
+		}
 		return err
 	}
-	common.Logger.Info("创建用户成功", zap.Uint("user_id", user.ID), zap.String("username", user.Username))
+	if common.Logger != nil {
+		common.Logger.Info("创建用户成功", zap.Uint("user_id", user.ID), zap.String("username", user.Username))
+	}
 	return nil
 }
 
@@ -51,10 +59,14 @@ func CreateUser(user *model.User) error {
 func UpdateUser(user *model.User) error {
 	err := DB.Save(user).Error
 	if err != nil {
-		common.Logger.Error("更新用户失败", zap.Uint("user_id", user.ID), zap.Error(err))
+		if common.Logger != nil {
+			common.Logger.Error("更新用户失败", zap.Uint("user_id", user.ID), zap.Error(err))
+		}
 		return err
 	}
-	common.Logger.Info("更新用户成功", zap.Uint("user_id", user.ID))
+	if common.Logger != nil {
+		common.Logger.Info("更新用户成功", zap.Uint("user_id", user.ID))
+	}
 	return nil
 }
 
@@ -62,10 +74,14 @@ func UpdateUser(user *model.User) error {
 func DeleteUser(id uint) error {
 	err := DB.Delete(&model.User{}, id).Error
 	if err != nil {
-		common.Logger.Error("删除用户失败", zap.Uint("user_id", id), zap.Error(err))
+		if common.Logger != nil {
+			common.Logger.Error("删除用户失败", zap.Uint("user_id", id), zap.Error(err))
+		}
 		return err
 	}
-	common.Logger.Info("删除用户成功", zap.Uint("user_id", id))
+	if common.Logger != nil {
+		common.Logger.Info("删除用户成功", zap.Uint("user_id", id))
+	}
 	return nil
 }
 
@@ -74,7 +90,9 @@ func CheckUsernameExist(username string) (bool, error) {
 	var count int64
 	err := DB.Model(&model.User{}).Where("username = ?", username).Count(&count).Error
 	if err != nil {
-		common.Logger.Error("检查用户名存在性失败", zap.String("username", username), zap.Error(err))
+		if common.Logger != nil {
+			common.Logger.Error("检查用户名存在性失败", zap.String("username", username), zap.Error(err))
+		}
 		return false, err
 	}
 	return count > 0, nil

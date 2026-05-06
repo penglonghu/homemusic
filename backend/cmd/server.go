@@ -9,57 +9,76 @@ import (
 	"github.com/homemusic/backend/internal/api"
 	"github.com/homemusic/backend/internal/common"
 	"github.com/homemusic/backend/internal/middleware"
+	"github.com/homemusic/backend/pkg/utils"
 	"go.uber.org/zap"
 )
 
-// RunServer 启动服务
 func RunServer() {
 	cfg := config.Conf.Server
-
-	// 设置gin模式
 	gin.SetMode(cfg.Mode)
 
-	// 初始化路由
 	r := gin.Default()
-
-	// 注册路由
 	apiGroup := r.Group("/api")
 	{
-		// 公开接口
 		apiGroup.GET("/health", api.HealthCheck)
 
-		// 初始化接口
 		initGroup := apiGroup.Group("/v1/init")
 		{
 			initGroup.GET("/check", api.CheckInit)
 			initGroup.POST("/exec", api.ExecInit)
 		}
 
-		// 需要认证的接口
-		authGroup := apiGroup.Group("")
+		authGroup := apiGroup.Group("/v1/auth")
+		{
+			authGroup.POST("/login", api.Login)
+		}
+
+		authGroup = apiGroup.Group("")
 		authGroup.Use(middleware.AuthMiddleware())
 		{
-			// 用户接口
 			authGroup.GET("/user/info", func(c *gin.Context) {
 				userID, _ := c.Get("user_id")
 				common.Success(c, map[string]interface{}{"user_id": userID})
 			})
 
-			// 音乐接口
 			musicGroup := authGroup.Group("/music")
 			{
 				musicGroup.POST("/scan", api.ScanMusic)
 				musicGroup.GET("/stats", api.GetScanStatistics)
 				musicGroup.GET("/list", api.GetMusics)
+				musicGroup.GET("/browse", api.BrowseMusic)
+				musicGroup.GET("/search", api.SearchMusic)
+				musicGroup.GET("/recent", api.GetRecentPlayRecords)
+				musicGroup.POST("/recent", api.RecordPlayHistory)
 				musicGroup.POST("/clean", api.CleanDeletedFiles)
 			}
 		}
+
+		// 无需认证的公开接口
+		publicGroup := apiGroup.Group("")
+		{
+			publicGroup.GET("/music/stream/:id", api.StreamMusic)  // 音频流接口无需认证
+		}
 	}
 
-	// 启动服务
 	addr := fmt.Sprintf(":%d", cfg.Port)
+	certFile := cfg.CertFile
+	keyFile := cfg.KeyFile
+	if certFile == "" {
+		certFile = "./certs/server.crt"
+	}
+	if keyFile == "" {
+		keyFile = "./certs/server.key"
+	}
+
+	if err := utils.EnsureSelfSignedCert(certFile, keyFile); err != nil {
+		common.Logger.Error("ensure tls cert failed", zap.Error(err))
+		panic("ensure tls cert failed")
+	}
+
+	common.Logger.Info("https cert ready", zap.String("cert_file", certFile), zap.String("key_file", keyFile))
 	common.Logger.Info("server start success", zap.String("addr", addr))
-	if err := r.Run(addr); err != nil && err != http.ErrServerClosed {
+	if err := r.RunTLS(addr, certFile, keyFile); err != nil && err != http.ErrServerClosed {
 		common.Logger.Error("server start failed", zap.Error(err))
 		panic("server start failed")
 	}
