@@ -26,9 +26,10 @@ func InitDB() error {
 	}
 
 	DB = db
+	NewInitDao.db = db
 
-	// 🔥 修复：升级 GORM 后，可以直接使用 AutoMigrate，无需再手动判断 HasTable
-	err = db.AutoMigrate(&model.User{})
+	// 自动迁移用户、初始化状态和音乐表
+	err = db.AutoMigrate(&model.User{}, &model.SysInit{}, &model.Music{})
 	if err != nil {
 		return err
 	}

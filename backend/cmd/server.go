@@ -28,14 +28,31 @@ func RunServer() {
 		// 公开接口
 		apiGroup.GET("/health", api.HealthCheck)
 
-		// 需要认证的接口
-		authGroup := apiGroup.Use(middleware.AuthMiddleware())
+		// 初始化接口
+		initGroup := apiGroup.Group("/v1/init")
 		{
-			// 业务接口预留
+			initGroup.GET("/check", api.CheckInit)
+			initGroup.POST("/exec", api.ExecInit)
+		}
+
+		// 需要认证的接口
+		authGroup := apiGroup.Group("")
+		authGroup.Use(middleware.AuthMiddleware())
+		{
+			// 用户接口
 			authGroup.GET("/user/info", func(c *gin.Context) {
 				userID, _ := c.Get("user_id")
 				common.Success(c, map[string]interface{}{"user_id": userID})
 			})
+
+			// 音乐接口
+			musicGroup := authGroup.Group("/music")
+			{
+				musicGroup.POST("/scan", api.ScanMusic)
+				musicGroup.GET("/stats", api.GetScanStatistics)
+				musicGroup.GET("/list", api.GetMusics)
+				musicGroup.POST("/clean", api.CleanDeletedFiles)
+			}
 		}
 	}
 

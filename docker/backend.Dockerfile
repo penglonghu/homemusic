@@ -8,7 +8,7 @@ ENV CGO_ENABLED=1
 ENV GOOS=linux
 
 # 安装依赖
-RUN apk add --no-cache git gcc musl-dev
+RUN apk add --no-cache git gcc musl-dev zlib-dev
 
 # 🔥 核心修复：仅复制依赖文件（缓存层！永远不会重复下载）
 COPY backend/go.mod backend/go.sum ./
